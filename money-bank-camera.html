@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Money Bank Adventure</title>
+
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        font-family: "Trebuchet MS", Arial, sans-serif;
+        background: linear-gradient(135deg, #b8f2ff, #fff3b0);
+        min-height: 100vh;
+        color: #263238;
+        overflow-x: hidden;
+    }
+
+    .screen { display: none; min-height: 100vh; padding: 25px; position: relative; overflow: hidden; }
+    .screen.active { display: flex; flex-direction: column; }
+
+    .cloud { position: absolute; font-size: 55px; opacity: .8; animation: floatCloud 7s ease-in-out infinite; pointer-events: none; }
+    .cloud.one { top: 30px; left: 5%; }
+    .cloud.two { top: 100px; right: 8%; animation-delay: 2s; }
+
+    @keyframes floatCloud { 0%,100% { transform: translateX(0); } 50% { transform: translateX(30px); } }
+
+    .topbar {
+        display: flex; justify-content: space-between; align-items: center;
+        background: white; border: 4px solid #263238; border-radius: 22px;
+        padding: 12px 20px; box-shadow: 0 7px 0 #263238; position: relative; z-index: 5;
+    }
+    .logo { font-size: 24px; font-weight: 900; }
+    .stars { background: #ffd93d; padding: 8px 15px; border: 3px solid #263238; border-radius: 20px; font-weight: bold; }
+
+    /* WELCOME */
+    #welcome { justify-content: center; align-items: center; text-align: center; }
+    .welcome-box {
+        max-width: 850px; width: 100%; background: white; border: 6px solid #263238;
+        border-radius: 40px; padding: 45px 30px; box-shadow: 0 12px 0 #263238; position: relative; z-index: 2;
+    }
+    .money-character { font-size: 100px; animation: bounce 1.8s infinite; }
+    @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-18px); } }
+    .welcome-box h1 { font-size: clamp(38px, 7vw, 72px); color: #ff7b00; text-shadow: 4px 4px 0 #263238; margin: 15px 0; }
+    .welcome-box h2 { color: #1479ff; margin-bottom: 20px; }
+    .welcome-box p { font-size: 20px; line-height: 1.6; margin-bottom: 25px; }
+
+    .start-btn, .map-btn, .retry-btn, .play-again-btn, .cam-btn {
+        border: 4px solid #263238; border-radius: 18px; padding: 15px 30px;
+        font-size: 20px; font-weight: 900; cursor: pointer; box-shadow: 0 7px 0 #263238; transition: .15s;
+    }
+    .start-btn { background: #55e86b; }
+    .map-btn { background: #55c7ff; }
+    .retry-btn { background: #ffcb3d; }
+    .play-again-btn { background: #ff6f91; }
+    .cam-btn { background: #c9a7ff; margin-left: 10px; }
+    .cam-btn.on { background: #ff8a8a; }
+    button:hover { transform: translateY(-3px); }
+    button:active { transform: translateY(4px); box-shadow: 0 3px 0 #263238; }
+
+    .gesture-guide {
+        display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 0 0 25px;
+    }
+    .gesture-guide span {
+        background: #fff6cf; border: 3px solid #263238; border-radius: 14px;
+        padding: 8px 14px; font-weight: bold; font-size: 16px;
+    }
+
+    /* MAP */
+    #map { align-items: center; }
+    .map-title { text-align: center; font-size: clamp(30px, 5vw, 55px); color: #ff6b00; text-shadow: 3px 3px white; margin: 20px 0; }
+    .map-container {
+        max-width: 900px; width: 100%; margin: auto; background: #8de0ff; border: 6px solid #263238;
+        border-radius: 35px; padding: 35px 20px; position: relative; box-shadow: 0 10px 0 #263238;
+    }
+    .road {
+        position: absolute; left: 50%; transform: translateX(-50%); top: 100px; bottom: 110px; width: 35px;
+        background: #777; border: 5px solid #263238; border-radius: 20px; z-index: 0;
+    }
+    .road::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%); height: 100%; border-left: 5px dashed white; }
+    .bank-list { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+    .bank-node {
+        width: min(420px, 90%); background: white; border: 5px solid #263238; border-radius: 25px;
+        padding: 15px; display: flex; align-items: center; gap: 15px; box-shadow: 0 6px 0 #263238; cursor: pointer; transition: .2s;
+    }
+    .bank-node:hover:not(.locked) { transform: scale(1.04); }
+    .bank-icon { font-size: 55px; min-width: 70px; text-align: center; }
+    .bank-info { text-align: left; flex: 1; }
+    .bank-info h3 { font-size: 22px; margin-bottom: 5px; }
+    .status { font-size: 14px; font-weight: bold; padding: 5px 10px; border-radius: 12px; display: inline-block; }
+    .ready { background: #a8f5b4; }
+    .locked { background: #ddd; filter: grayscale(1); cursor: not-allowed; opacity: .7; }
+    .cleared { background: #fff2a8; }
+    .status-ready { color: #16862b; }
+    .status-locked { color: #777; }
+    .status-cleared { color: #b47700; }
+
+    /* QUESTION */
+    #questionScreen { align-items: center; }
+    .question-wrapper { width: 100%; max-width: 950px; margin: auto; }
+    .bank-header { text-align: center; margin: 20px 0; }
+    .bank-header .building { font-size: 70px; }
+    .bank-header h1 { font-size: clamp(30px, 5vw, 48px); color: #ff7000; text-shadow: 3px 3px white; }
+    .question-card { background: white; border: 6px solid #263238; border-radius: 35px; padding: 35px; box-shadow: 0 10px 0 #263238; }
+    .character-row { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; }
+    .student { font-size: 75px; }
+    .speech {
+        flex: 1; background: #fff6cf; border: 4px solid #263238; border-radius: 25px; padding: 20px;
+        font-size: 21px; line-height: 1.5; font-weight: bold; position: relative;
+    }
+    .speech::before {
+        content: ""; position: absolute; left: -18px; top: 25px; border-width: 10px; border-style: solid;
+        border-color: transparent #263238 transparent transparent;
+    }
+    .question-number { text-align: center; background: #ccecff; padding: 8px; border-radius: 15px; font-weight: bold; margin-bottom: 18px; }
+    .answers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 25px; }
+    .answer-btn {
+        background: #f7f7f7; border: 5px solid #263238; border-radius: 22px; padding: 20px 12px;
+        font-size: 19px; font-weight: 900; cursor: pointer; box-shadow: 0 7px 0 #263238; min-height: 90px;
+        position: relative; transition: .15s;
+    }
+    .answer-btn:nth-child(1) { background: #ffb3b3; }
+    .answer-btn:nth-child(2) { background: #aee7ff; }
+    .answer-btn:nth-child(3) { background: #b8f5bd; }
+    .answer-btn:hover { transform: translateY(-5px) rotate(-1deg); }
+    .answer-btn.highlight { transform: translateY(-8px) scale(1.06); outline: 6px solid #ffd93d; }
+    .finger-badge { display: none; font-size: 15px; margin-top: 6px; opacity: .85; }
+    body.cam-on .finger-badge { display: block; }
+    .letter {
+        display: inline-block; background: #263238; color: white; border-radius: 50%;
+        width: 32px; height: 32px; line-height: 32px; margin-right: 6px;
+    }
+
+    /* RESULT */
+    .result-screen { justify-content: center; align-items: center; text-align: center; }
+    .result-card {
+        max-width: 750px; width: 100%; background: white; border: 6px solid #263238;
+        border-radius: 40px; padding: 40px 30px; box-shadow: 0 12px 0 #263238;
+    }
+    .result-emoji { font-size: 100px; animation: bounce 1.5s infinite; }
+    .result-card h1 { font-size: 48px; margin: 15px 0; }
+    .wrong-title { color: #f04444; }
+    .success-title { color: #20a43c; }
+    .hint-box, .calculation-box {
+        margin: 20px auto; max-width: 600px; padding: 20px; border-radius: 20px;
+        border: 4px solid #263238; font-size: 19px; line-height: 1.6;
+    }
+    .hint-box { background: #fff1a8; }
+    .calculation-box { background: #d7ffd9; }
+    .result-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-top: 25px; }
+
+    /* VAULT */
+    #vaultScreen { justify-content: center; align-items: center; text-align: center; background: radial-gradient(circle, #fff5a8, #ffd36e, #ff9b5e); }
+    .vault-card {
+        max-width: 850px; width: 100%; background: white; border: 7px solid #263238;
+        border-radius: 45px; padding: 40px 25px; box-shadow: 0 15px 0 #263238; position: relative; z-index: 3;
+    }
+    .vault { font-size: 130px; animation: vaultBounce 1.5s infinite; }
+    @keyframes vaultBounce { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12) rotate(-3deg); } }
+    .vault-card h1 { font-size: clamp(38px, 7vw, 70px); color: #ff9700; text-shadow: 4px 4px #263238; margin: 15px 0; }
+    .vault-card h2 { color: #20a43c; font-size: 32px; }
+    .star-row { font-size: 45px; margin: 20px; letter-spacing: 8px; }
+
+    .confetti { position: fixed; top: -20px; font-size: 25px; animation: fall 3s linear forwards; z-index: 10; pointer-events: none; }
+    @keyframes fall { to { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+
+    /* =========================
+       CAMERA PANEL
+    ========================= */
+    #camPanel {
+        display: none; position: fixed; right: 14px; bottom: 14px; width: 250px; z-index: 50;
+        background: white; border: 4px solid #263238; border-radius: 20px;
+        box-shadow: 0 6px 0 #263238; padding: 8px; text-align: center;
+    }
+    body.cam-on #camPanel { display: block; }
+    .cam-view { position: relative; width: 100%; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: #111; }
+    .cam-view video, .cam-view canvas {
+        position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);
+    }
+    #camBig {
+        font-size: 44px; font-weight: 900; margin-top: 4px; min-height: 56px; line-height: 56px;
+    }
+    #camStatus { font-size: 13px; font-weight: bold; min-height: 34px; line-height: 1.3; }
+    .hold-bar { height: 12px; border: 3px solid #263238; border-radius: 10px; background: #eee; overflow: hidden; margin-top: 4px; }
+    .hold-bar div { height: 100%; width: 0%; background: #55e86b; transition: width .08s linear; }
+
+    @media (max-width: 700px) {
+        .screen { padding: 12px; }
+        .topbar { padding: 10px 12px; }
+        .logo { font-size: 16px; }
+        .stars { font-size: 14px; }
+        .answers { grid-template-columns: 1fr; }
+        .character-row { flex-direction: column; }
+        .speech::before { display: none; }
+        .question-card { padding: 20px; }
+        .bank-node { width: 95%; }
+        .bank-icon { font-size: 45px; }
+        .cam-btn { margin: 14px 0 0; display: block; width: 100%; }
+        #camPanel { width: 150px; right: 8px; bottom: 8px; padding: 5px; }
+        #camBig { font-size: 28px; min-height: 36px; line-height: 36px; }
+        #camStatus { font-size: 11px; }
+    }
+</style>
+</head>
+
+<body>
+
+<!-- WELCOME -->
+<section id="welcome" class="screen active">
+    <div class="cloud one">☁️</div>
+    <div class="cloud two">☁️</div>
+
+    <div class="welcome-box">
+        <div class="money-character">🪙</div>
+        <h1>💰 MONEY BANK<br>ADVENTURE 💰</h1>
+        <h2>🌟 Become a Money Master! 🌟</h2>
+
+        <p>
+            Help our cartoon money explorers travel through
+            <strong>6 amazing banks!</strong>
+            Solve money challenges, collect stars,
+            and unlock the Millionaire Vault!
+        </p>
+
+        <div class="gesture-guide">
+            <span>☝️ 1 finger = A</span>
+            <span>✌️ 2 fingers = B</span>
+            <span>🤟 3 fingers = C</span>
+            <span>🖐️ Open palm = Next</span>
+        </div>
+
+        <button class="start-btn" onclick="startGame()">🚀 START GAME</button>
+        <button class="cam-btn" id="camToggle" onclick="toggleCamera()">📷 USE CAMERA</button>
+    </div>
+</section>
+
+<!-- MAP -->
+<section id="map" class="screen">
+    <div class="topbar">
+        <div class="logo">💰 MONEY BANK ADVENTURE</div>
+        <div class="stars">⭐ Stars: <span id="starCount">0</span></div>
+    </div>
+    <h1 class="map-title">🗺️ BANK CITY</h1>
+    <div class="map-container">
+        <div class="road"></div>
+        <div class="bank-list" id="bankList"></div>
+    </div>
+</section>
+
+<!-- QUESTION -->
+<section id="questionScreen" class="screen">
+    <div class="topbar">
+        <div class="logo">💰 MONEY BANK ADVENTURE</div>
+        <div class="stars">⭐ Stars: <span id="questionStars">0</span></div>
+    </div>
+
+    <div class="question-wrapper">
+        <div class="bank-header">
+            <div class="building" id="bankBuilding">🏦</div>
+            <h1 id="bankTitle">Savings Bank</h1>
+        </div>
+
+        <div class="question-card">
+            <div class="question-number">🧠 MONEY CHALLENGE <span id="questionNumber"></span></div>
+
+            <div class="character-row">
+                <div class="student" id="studentCharacter">👧</div>
+                <div class="speech" id="questionText"></div>
+            </div>
+
+            <div class="answers">
+                <button class="answer-btn" id="ansBtn0" onclick="checkAnswer(0)">
+                    <span class="letter">A</span><span id="answerA"></span>
+                    <div class="finger-badge">☝️ Show 1 finger</div>
+                </button>
+                <button class="answer-btn" id="ansBtn1" onclick="checkAnswer(1)">
+                    <span class="letter">B</span><span id="answerB"></span>
+                    <div class="finger-badge">✌️ Show 2 fingers</div>
+                </button>
+                <button class="answer-btn" id="ansBtn2" onclick="checkAnswer(2)">
+                    <span class="letter">C</span><span id="answerC"></span>
+                    <div class="finger-badge">🤟 Show 3 fingers</div>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- WRONG -->
+<section id="wrongScreen" class="screen result-screen">
+    <div class="result-card">
+        <div class="result-emoji">😅</div>
+        <h1 class="wrong-title">Oops! Try Again!</h1>
+        <p>Don't worry, Money Master! Think carefully and try the question again.</p>
+
+        <div class="hint-box">
+            💡 <strong>HINT</strong><br><br>
+            <span id="hintText"></span>
+        </div>
+
+        <button class="retry-btn" onclick="retryQuestion()">🔄 TRY AGAIN</button>
+        <p class="cam-tip" style="margin-top:15px;font-size:16px;">🖐️ Camera: hold an open palm to try again</p>
+    </div>
+</section>
+
+<!-- SUCCESS -->
+<section id="successScreen" class="screen result-screen">
+    <div class="result-card">
+        <div class="result-emoji">🎉</div>
+        <h1 class="success-title">GREAT JOB!</h1>
+        <p>⭐ You solved the challenge!</p>
+
+        <div class="calculation-box">
+            <strong>🧮 Let's check:</strong><br><br>
+            <span id="calculationText"></span>
+        </div>
+
+        <p>🪙 You earned <strong>1 STAR!</strong></p>
+
+        <div class="result-buttons">
+            <button class="map-btn" id="mapButton" onclick="goAfterSuccess()">🗺️ RETURN TO MAP</button>
+        </div>
+        <p class="cam-tip" style="margin-top:15px;font-size:16px;">🖐️ Camera: hold an open palm to continue</p>
+    </div>
+</section>
+
+<!-- VAULT -->
+<section id="vaultScreen" class="screen">
+    <div class="cloud one">☁️</div>
+    <div class="cloud two">☁️</div>
+
+    <div class="vault-card">
+        <div class="vault">💎🔐</div>
+        <h1>MILLIONAIRE VAULT</h1>
+        <h2>🏆 CONGRATULATIONS! 🏆</h2>
+        <p style="font-size:22px; margin-top:15px;">You completed all 6 Money Banks!</p>
+        <div class="star-row">⭐ ⭐ ⭐ ⭐ ⭐ ⭐</div>
+        <h2>🥳 YOU ARE A MONEY MASTER! 🥳</h2>
+        <p style="font-size:18px; margin:20px;">
+            You mastered mixed operations involving money, addition and multiplication!
+        </p>
+        <button class="play-again-btn" onclick="playAgain()">🔄 PLAY AGAIN</button>
+    </div>
+</section>
+
+<!-- CAMERA PANEL -->
+<div id="camPanel">
+    <div class="cam-view">
+        <video id="camVideo" autoplay playsinline muted></video>
+        <canvas id="camCanvas"></canvas>
+    </div>
+    <div id="camBig">—</div>
+    <div class="hold-bar"><div id="holdFill"></div></div>
+    <div id="camStatus">Starting camera…</div>
+</div>
+
+
+<script>
+/* ==========================================
+   GAME DATA
+========================================== */
+const banks = [
+    {
+        name: "Savings Bank", icon: "🏦", character: "👧",
+        question: "Aisyah saves RM2,500 every month for 12 months. She already has RM5,000 in her savings account. How much money does she have altogether?",
+        answers: ["RM35,000", "RM30,000", "RM90,000"], correct: 0,
+        hint: "First multiply RM2,500 × 12. Then add the RM5,000 already in the account.",
+        calculation: "RM5,000 + (RM2,500 × 12) = RM5,000 + RM30,000 = RM35,000"
+    },
+    {
+        name: "Shopping Bank", icon: "🛒", character: "👦",
+        question: "A school buys 8 laptops at RM3,500 each and spends RM6,000 on software. What is the total cost?",
+        answers: ["RM28,000", "RM56,000", "RM34,000"], correct: 2,
+        hint: "Multiply RM3,500 by 8 first. Then add RM6,000.",
+        calculation: "(RM3,500 × 8) + RM6,000 = RM28,000 + RM6,000 = RM34,000"
+    },
+    {
+        name: "Business Bank", icon: "💼", character: "👧",
+        question: "A company has RM25,000 and receives 15 payments of RM4,000. How much money does the company have altogether?",
+        answers: ["RM60,000", "RM85,000", "RM100,000"], correct: 1,
+        hint: "Multiply RM4,000 × 15 first, then add RM25,000.",
+        calculation: "RM25,000 + (RM4,000 × 15) = RM25,000 + RM60,000 = RM85,000"
+    },
+    {
+        name: "Travel Bank", icon: "✈️", character: "👦",
+        question: "A travel company sells 25 holiday packages at RM6,000 each and receives RM50,000 sponsorship. What is the total amount?",
+        answers: ["RM200,000", "RM150,000", "RM300,000"], correct: 0,
+        hint: "Multiply RM6,000 × 25 first. Then add the RM50,000 sponsorship.",
+        calculation: "(RM6,000 × 25) + RM50,000 = RM150,000 + RM50,000 = RM200,000"
+    },
+    {
+        name: "Community Bank", icon: "🏘️", character: "👧",
+        question: "A community centre receives RM12,000 from each of 30 sponsors and already has RM40,000. How much money does it have altogether?",
+        answers: ["RM360,000", "RM420,000", "RM400,000"], correct: 2,
+        hint: "Multiply RM12,000 × 30 first. Then add the RM40,000 already available.",
+        calculation: "RM40,000 + (RM12,000 × 30) = RM40,000 + RM360,000 = RM400,000"
+    },
+    {
+        name: "Millionaire Bank", icon: "🏆", character: "👦",
+        question: "A company has RM100,000 and earns RM25,000 from each of 30 projects. How much money does the company have altogether?",
+        answers: ["RM750,000", "RM850,000", "RM800,000"], correct: 1,
+        hint: "Multiply RM25,000 × 30 first. Then add RM100,000.",
+        calculation: "RM100,000 + (RM25,000 × 30) = RM100,000 + RM750,000 = RM850,000"
+    }
+];
+
+/* ==========================================
+   GAME STATE
+========================================== */
+let currentBank = 0;
+let completedBanks = [];
+let totalStars = 0;
+
+function showScreen(id) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    window.scrollTo(0, 0);
+}
+
+function startGame() {
+    currentBank = 0; completedBanks = []; totalStars = 0;
+    updateStars();
+    showMap();
+}
+
+function showMap() { renderMap(); showScreen("map"); }
+
+function renderMap() {
+    const bankList = document.getElementById("bankList");
+    bankList.innerHTML = "";
+
+    banks.forEach((bank, index) => {
+        const isCompleted = completedBanks.includes(index);
+        const isUnlocked = index === 0 || completedBanks.includes(index - 1);
+
+        const node = document.createElement("div");
+        node.className = "bank-node " + (!isUnlocked ? "locked" : "");
+
+        let statusText, statusClass, icon;
+        if (isCompleted) { statusText = "✅ CLEARED"; statusClass = "status-cleared"; icon = "🏆"; }
+        else if (isUnlocked) { statusText = "🔓 READY TO PLAY"; statusClass = "status-ready"; icon = bank.icon; }
+        else { statusText = "🔒 LOCKED"; statusClass = "status-locked"; icon = "🔒"; }
+
+        node.innerHTML = `
+            <div class="bank-icon">${icon}</div>
+            <div class="bank-info">
+                <h3>Bank ${index + 1}: ${bank.name}</h3>
+                <span class="status ${isCompleted ? "cleared" : ""} ${statusClass}">${statusText}</span>
+            </div>`;
+
+        if (isUnlocked && !isCompleted) node.onclick = () => openBank(index);
+        bankList.appendChild(node);
+    });
+}
+
+function openBank(index) {
+    currentBank = index;
+    const bank = banks[index];
+
+    document.getElementById("bankBuilding").textContent = bank.icon;
+    document.getElementById("bankTitle").textContent = `Bank ${index + 1}: ${bank.name}`;
+    document.getElementById("studentCharacter").textContent = bank.character;
+    document.getElementById("questionNumber").textContent = `— Bank ${index + 1} of 6`;
+    document.getElementById("questionText").textContent = bank.question;
+    document.getElementById("answerA").textContent = bank.answers[0];
+    document.getElementById("answerB").textContent = bank.answers[1];
+    document.getElementById("answerC").textContent = bank.answers[2];
+    document.getElementById("questionStars").textContent = totalStars;
+
+    showScreen("questionScreen");
+}
+
+function checkAnswer(selected) {
+    const bank = banks[currentBank];
+    if (selected === bank.correct) {
+        completeBank();
+    } else {
+        document.getElementById("hintText").textContent = bank.hint;
+        showScreen("wrongScreen");
+    }
+}
+
+function retryQuestion() { openBank(currentBank); }
+
+function completeBank() {
+    if (!completedBanks.includes(currentBank)) {
+        completedBanks.push(currentBank);
+        totalStars++;
+    }
+    updateStars();
+    document.getElementById("calculationText").textContent = banks[currentBank].calculation;
+    document.getElementById("mapButton").textContent =
+        currentBank === 5 ? "💎 ENTER MILLIONAIRE VAULT" : "🗺️ RETURN TO MAP";
+    showScreen("successScreen");
+}
+
+function goAfterSuccess() { currentBank === 5 ? showVault() : showMap(); }
+function showVault() { createConfetti(); showScreen("vaultScreen"); }
+
+function playAgain() {
+    currentBank = 0; completedBanks = []; totalStars = 0;
+    updateStars();
+    showMap();
+}
+
+function updateStars() {
+    document.getElementById("starCount").textContent = totalStars;
+    document.getElementById("questionStars").textContent = totalStars;
+}
+
+function createConfetti() {
+    const symbols = ["⭐", "💰", "🪙", "🎉", "🎊", "✨", "💎"];
+    for (let i = 0; i < 45; i++) {
+        const c = document.createElement("div");
+        c.className = "confetti";
+        c.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        c.style.left = Math.random() * 100 + "vw";
+        c.style.animationDelay = Math.random() * 2 + "s";
+        c.style.fontSize = (18 + Math.random() * 25) + "px";
+        document.body.appendChild(c);
+        setTimeout(() => c.remove(), 5000);
+    }
+}
+
+/* ==========================================
+   GESTURE BRIDGE (used by camera code below)
+   n = number of raised fingers (1-4), 4 = open palm
+========================================== */
+function activeScreenId() {
+    const el = document.querySelector(".screen.active");
+    return el ? el.id : "";
+}
+
+// What the camera should currently listen for
+function gestureMode() {
+    return activeScreenId() === "questionScreen" ? "answer" : "continue";
+}
+
+function gestureHelp() {
+    switch (activeScreenId()) {
+        case "questionScreen": return "☝️ 1 = A  ✌️ 2 = B  🤟 3 = C";
+        case "welcome":        return "🖐️ Open palm to start";
+        case "map":            return "🖐️ Open palm to play next bank";
+        case "wrongScreen":    return "🖐️ Open palm to try again";
+        case "successScreen":  return "🖐️ Open palm to continue";
+        case "vaultScreen":    return "🖐️ Open palm to play again";
+        default: return "";
+    }
+}
+
+// Highlights the answer button while the player is still holding
+function previewGesture(n) {
+    for (let i = 0; i < 3; i++) {
+        document.getElementById("ansBtn" + i).classList.toggle("highlight", n === i + 1);
+    }
+}
+
+function handleGesture(n) {
+    switch (activeScreenId()) {
+        case "questionScreen":
+            if (n >= 1 && n <= 3) { previewGesture(0); checkAnswer(n - 1); return true; }
+            break;
+        case "welcome":       if (n === 4) { startGame(); return true; } break;
+        case "wrongScreen":   if (n === 4) { retryQuestion(); return true; } break;
+        case "successScreen": if (n === 4) { goAfterSuccess(); return true; } break;
+        case "vaultScreen":   if (n === 4) { playAgain(); return true; } break;
+        case "map":
+            if (n === 4) {
+                const next = banks.findIndex((b, i) =>
+                    !completedBanks.includes(i) && (i === 0 || completedBanks.includes(i - 1)));
+                if (next >= 0) { openBank(next); return true; }
+            }
+            break;
+    }
+    return false;
+}
+
+function toggleCamera() {
+    if (window.__cameraToggle) {
+        window.__cameraToggle();
+    } else {
+        alert("The camera module is still loading (or could not load). Check your internet connection and try again.");
+    }
+}
+</script>
+
+
+<!-- =========================================
+     CAMERA / HAND DETECTION (MediaPipe)
+========================================== -->
+<script type="module">
+import { HandLandmarker, FilesetResolver }
+    from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+const video   = document.getElementById("camVideo");
+const canvas  = document.getElementById("camCanvas");
+const ctx     = canvas.getContext("2d");
+const bigEl   = document.getElementById("camBig");
+const statEl  = document.getElementById("camStatus");
+const fillEl  = document.getElementById("holdFill");
+const toggle  = document.getElementById("camToggle");
+
+const HOLD_MS     = 1300;  // how long a gesture must be held to count
+const COOLDOWN_MS = 1200;  // pause after an action so it doesn't double-fire
+
+let landmarker = null;
+let stream = null;
+let running = false;
+let lastVideoTime = -1;
+
+let heldValue = 0;
+let heldSince = 0;
+let lockedUntil = 0;
+let needRelease = false;   // after an action, hand must drop/change before the next one
+
+async function loadModel() {
+    if (landmarker) return;
+    const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+    );
+    const modelUrl =
+        "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+    try {
+        landmarker = await HandLandmarker.createFromOptions(fileset, {
+            baseOptions: { modelAssetPath: modelUrl, delegate: "GPU" },
+            runningMode: "VIDEO", numHands: 1
+        });
+    } catch (e) {
+        landmarker = await HandLandmarker.createFromOptions(fileset, {
+            baseOptions: { modelAssetPath: modelUrl, delegate: "CPU" },
+            runningMode: "VIDEO", numHands: 1
+        });
+    }
+}
+
+async function startCamera() {
+    document.body.classList.add("cam-on");
+    statEl.textContent = "Loading hand detector…";
+    bigEl.textContent = "⏳";
+    toggle.textContent = "📷 CAMERA ON (tap to turn off)";
+    toggle.classList.add("on");
+
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user", width: 640, height: 480 }, audio: false
+        });
+        video.srcObject = stream;
+        await video.play();
+        await loadModel();
+    } catch (err) {
+        console.error(err);
+        statEl.textContent = err && err.name === "NotAllowedError"
+            ? "Camera blocked. Allow camera access in your browser, then try again."
+            : "Could not start camera: " + (err && err.message ? err.message : err);
+        bigEl.textContent = "🚫";
+        stopCamera(true);
+        return;
+    }
+
+    running = true;
+    needRelease = false;
+    heldValue = 0;
+    requestAnimationFrame(loop);
+}
+
+function stopCamera(keepMessage) {
+    running = false;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    video.srcObject = null;
+    toggle.textContent = "📷 USE CAMERA";
+    toggle.classList.remove("on");
+    if (!keepMessage) document.body.classList.remove("cam-on");
+    window.previewGesture && window.previewGesture(0);
+}
+
+window.__cameraToggle = () => { running || stream ? stopCamera() : startCamera(); };
+
+/* Count raised fingers (index, middle, ring, pinky). Thumb is ignored so
+   1-3 fingers are unambiguous, and 4 = open palm. A finger counts as raised
+   when its tip is farther from the wrist than its middle joint, which works
+   whichever way the hand is turned. */
+function countFingers(lm) {
+    const wrist = lm[0];
+    const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const fingers = [[8, 6], [12, 10], [16, 14], [20, 18]]; // [tip, pip]
+    let n = 0;
+    for (const [tip, pip] of fingers) {
+        if (d(lm[tip], wrist) > d(lm[pip], wrist) * 1.08) n++;
+    }
+    return n;
+}
+
+function drawHand(lm) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // canvas is object-fit:cover'd via CSS, so draw in video coordinates
+    ctx.fillStyle = "#55e86b";
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    for (const p of lm) {
+        ctx.beginPath();
+        ctx.arc(p.x * canvas.width, p.y * canvas.height, 5, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+    }
+}
+
+function setProgress(p) { fillEl.style.width = Math.round(p * 100) + "%"; }
+
+function loop() {
+    if (!running) return;
+
+    if (video.readyState >= 2 && video.currentTime !== lastVideoTime && landmarker) {
+        lastVideoTime = video.currentTime;
+
+        if (canvas.width !== video.videoWidth) {
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+        }
+
+        const res = landmarker.detectForVideo(video, performance.now());
+        const now = performance.now();
+        const help = window.gestureHelp ? window.gestureHelp() : "";
+
+        if (res.landmarks && res.landmarks.length) {
+            const lm = res.landmarks[0];
+            drawHand(lm);
+            const n = countFingers(lm);
+
+            const validNow = window.gestureMode() === "answer" ? (n >= 1 && n <= 3) : (n === 4);
+            const shown = n === 0 ? "✊" : n === 4 ? "🖐️" : String(n);
+            bigEl.textContent = shown;
+
+            if (now < lockedUntil) {
+                statEl.textContent = "Nice!";
+                setProgress(0);
+            } else if (needRelease && validNow && n === heldValue) {
+                statEl.textContent = "Lower your hand to continue";
+                setProgress(0);
+            } else if (!validNow) {
+                needRelease = false;
+                heldValue = 0;
+                setProgress(0);
+                window.previewGesture(0);
+                statEl.textContent = help;
+            } else {
+                needRelease = false;
+                if (n !== heldValue) { heldValue = n; heldSince = now; }
+                const p = Math.min(1, (now - heldSince) / HOLD_MS);
+                setProgress(p);
+                window.previewGesture(window.gestureMode() === "answer" ? n : 0);
+                statEl.textContent = "Hold still… " + help;
+
+                if (p >= 1) {
+                    const acted = window.handleGesture(n);
+                    if (acted) {
+                        lockedUntil = now + COOLDOWN_MS;
+                        needRelease = true;
+                        setProgress(0);
+                    }
+                    heldSince = now;
+                }
+            }
+        } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            heldValue = 0;
+            needRelease = false;
+            setProgress(0);
+            window.previewGesture(0);
+            bigEl.textContent = "👋";
+            statEl.textContent = "Show your hand to the camera. " + help;
+        }
+    }
+    requestAnimationFrame(loop);
+}
+
+// Make bridge functions visible to this module (classic-script functions are on window)
+</script>
+
+</body>
+</html>
